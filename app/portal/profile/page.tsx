@@ -1,71 +1,133 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
+import { ShieldCheck, Star } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getMemberPortalData } from "@/lib/portal/member-data";
+import { getMemberProfileHubData } from "@/lib/profile/hub-data";
+import { VehicleCard } from "@/components/VehicleCard";
+import { ContactPreferencesPanel } from "@/components/profile/ContactPreferencesPanel";
+import { RsvpHistoryList } from "@/components/profile/RsvpHistoryList";
+import { StorageStatusCard } from "@/components/profile/StorageStatusCard";
 
-export default async function ProfilePage() {
+const TIER_BADGES: Record<string, string> = {
+  FOUNDER: "border-[rgba(var(--amber-rgb),0.5)] bg-[rgba(var(--amber-rgb),0.12)] text-[var(--amber)]",
+  PREMIUM: "border-[rgba(var(--blue-rgb),0.5)] bg-[rgba(var(--blue-rgb),0.12)] text-[var(--blue)]",
+  STANDARD: "border-[rgba(var(--border-rgb),0.4)] bg-[rgba(var(--surface3-rgb),0.65)] text-[rgba(var(--text-rgb),0.7)]",
+};
+
+export default async function MemberProfileHub() {
   const session = await auth();
+  if (!session?.user?.email) redirect("/login?session=expired");
 
-  if (!session?.user?.email) {
-    redirect("/login?session=expired");
-  }
+  const hub = await getMemberProfileHubData(session.user.email);
 
-  const portal = await getMemberPortalData(session.user.email);
+  const tierClass =
+    TIER_BADGES[hub.member.tier.toUpperCase()] ?? TIER_BADGES["STANDARD"];
 
-  const membershipDetails = [
-    { label: "Member ID", value: portal.profile.memberId },
-    { label: "Tier", value: portal.profile.tier },
-    { label: "Member since", value: portal.profile.memberSince },
-    { label: "Spot", value: `Spot ${portal.hero.bayLabel}` },
-    { label: "Concierge", value: portal.profile.concierge.phone },
-    { label: "Key fobs", value: "2 active" },
+  const memberDetails = [
+    { label: "Member ID", value: hub.member.memberId },
+    { label: "Tier", value: hub.member.tier },
+    { label: "Member since", value: hub.member.memberSince },
+    { label: "Spot", value: `Spot ${hub.storage.spotLabel}` },
+    { label: "Fleet stored", value: hub.stats.stored.toString() },
+    { label: "Fleet total", value: hub.stats.total.toString() },
   ];
 
   return (
     <div className="space-y-6">
+      {/* ─── Header ─── */}
       <header>
-        <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Profile</p>
-        <h1 className="text-2xl font-semibold text-[var(--text)]">Membership</h1>
-        <p className="text-sm text-[rgba(var(--text-rgb),0.65)]">Contact info, notification preferences, and concierge notes.</p>
+        <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">
+          Member hub
+        </p>
+        <h1 className="text-2xl font-semibold text-[var(--text)]">
+          {hub.member.name}
+        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className={`mobile-chip ${tierClass}`}>
+            <Star className="h-3.5 w-3.5" aria-hidden="true" />
+            {hub.member.tier}
+          </span>
+          <span className="mobile-chip border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.5)] text-[rgba(var(--text-rgb),0.65)]">
+            <ShieldCheck className="h-3.5 w-3.5 text-[var(--blue)]" aria-hidden="true" />
+            {hub.member.tagline}
+          </span>
+        </div>
       </header>
 
-      <section className="mobile-card grid grid-cols-1 gap-4 border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface2-rgb),0.95)] sm:grid-cols-2">
-        {membershipDetails.map((detail) => (
-          <div key={detail.label} className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.65)] p-3">
-            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">{detail.label}</p>
-            <p className="mt-1 text-base font-semibold text-[var(--text)]">{detail.value}</p>
+      {/* ─── Identity card ─── */}
+      <section className="mobile-card grid grid-cols-2 gap-3 border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface2-rgb),0.95)] sm:grid-cols-3">
+        {memberDetails.map((d) => (
+          <div
+            key={d.label}
+            className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.65)] p-3"
+          >
+            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">
+              {d.label}
+            </p>
+            <p className="mt-1 text-base font-semibold text-[var(--text)]">
+              {d.value}
+            </p>
           </div>
         ))}
       </section>
 
-      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface3-rgb),0.9)]">
+      {/* ─── Storage status ─── */}
+      <StorageStatusCard storage={hub.storage} />
+
+      {/* ─── Vehicles on file ─── */}
+      <section className="space-y-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Contacts</p>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Reach you how?</h2>
+          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">
+            Vehicles on file
+          </p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">
+            {hub.stats.total} vehicle{hub.stats.total !== 1 ? "s" : ""}
+          </h2>
         </div>
-        <div className="space-y-3">
-          {portal.profile.profileContacts.map((contact) => (
-            <div key={contact.label} className="flex items-center justify-between rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface2-rgb),0.7)] px-4 py-3 text-sm">
-              <span className="text-[rgba(var(--text-rgb),0.65)]">{contact.label}</span>
-              <span className="font-semibold text-[var(--text)]">{contact.value}</span>
-            </div>
+        <div className="space-y-4">
+          {hub.vehicles.map((v) => (
+            <VehicleCard
+              key={v.id}
+              vehicle={v}
+              primaryLabel="Details"
+              secondaryLabel="Request pull-up"
+            />
           ))}
+          {hub.vehicles.length === 0 && (
+            <div className="mobile-card border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.5)] text-center text-sm text-[rgba(var(--text-rgb),0.5)]">
+              No vehicles on file — contact your concierge to add one.
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.5)] bg-[rgba(var(--surface2-rgb),0.9)]">
+      {/* ─── Contact preferences (interactive) ─── */}
+      <ContactPreferencesPanel prefs={hub.contactPreferences} />
+
+      {/* ─── RSVP history ─── */}
+      <RsvpHistoryList events={hub.rsvpHistory} />
+
+      {/* ─── Concierge footer ─── */}
+      <section className="mobile-card flex flex-wrap items-center justify-between gap-4 border-[rgba(var(--border-rgb),0.45)] bg-[rgba(var(--surface3-rgb),0.85)]">
         <div>
-          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Notifications</p>
-          <h2 className="text-lg font-semibold text-[var(--text)]">When to ping you</h2>
+          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">
+            {hub.member.concierge.label}
+          </p>
+          <p className="mt-1 text-xl font-semibold text-[var(--text)]">
+            {hub.member.concierge.phone}
+          </p>
+          <p className="text-sm text-[rgba(var(--text-rgb),0.6)]">
+            {hub.member.concierge.statusLine}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {portal.profile.notifications.map((item) => (
-            <span key={item} className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.7)] px-4 py-2 text-sm text-[var(--text)]">
-              {item}
-            </span>
-          ))}
-        </div>
+        <a
+          href={hub.member.concierge.href}
+          className="tappable-area inline-flex items-center gap-2 rounded-2xl border border-[rgba(var(--blue-rgb),0.5)] bg-[rgba(var(--blue-rgb),0.15)] px-5 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-[var(--blue)]"
+        >
+          Call concierge
+        </a>
       </section>
     </div>
   );

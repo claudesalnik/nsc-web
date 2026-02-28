@@ -1,11 +1,61 @@
-# NSC Prisma Schema Notes
+# NSC Prisma Schema
 
-## Design Highlights
+The Newcastle Sunday Club data model focuses on a clean separation between members, their vehicles, and the facility floor plan. Prisma targets PostgreSQL / Vercel Postgres.
 
-- **Ownership-first model:** `Owner` records hold the canonical membership data (linking back to auth via `userId`). Email and userId are unique, making lookups predictable regardless of identity provider.
-- **Vehicle-spot pairing:** Vehicles keep the foreign key for their assigned `StorageSpot`, enforcing a one-to-one relationship (each spot may host at most one vehicle). Spot occupancy is tracked explicitly for quick filtering while still derivable from the relation.
-- **Rich media trail:** Vehicles store quick-reference photo URLs inline, while the `Photo` model captures auditable uploads with type metadata, uploader, and timestamps.
-- **Access logging:** `AccessEvent` ties both the vehicle and the owner to every in/out movement. Composite indexes on `(vehicleId, timestamp)` and `timestamp` accelerate the most common queries (recent activity, vehicle history).
-- **Status-aware storage:** Enums (`VehicleStatus`, `PhotoType`, `AccessEventType`, `MembershipTier`) reduce magic strings and map cleanly to UI filters.
-- **Cascade safety:** Deleting a vehicle automatically removes dependent photos and access logs, keeping the database tidy without orphan records.
-- **Seed realism:** The seed script populates 3 members, 5 hero cars, and 10 spots with believable metadata so UI development and dashboards have meaningful sample data out of the box.
+## Models
+
+### Owner
+- Canonical member profile.
+- Required: `fullName`, `email` (unique), `membershipTier`, `status`.
+- Optional metadata: `phone`, `city`, `company`, `membershipTag`, free-form `notes`.
+- Relations:
+  - `vehicles` — one-to-many vehicles per owner.
+  - `conciergeRequests` — optional concierge workflow (future).
+
+### Vehicle
+- Represents a single stored vehicle.
+- Fields: `vin` (unique), `year`, `make`, `model`, `trim?`, `color?`, `notes?`.
+- Denormalized status cache: `currentStatus: AccessStatus` (`IN | OUT | MAINTENANCE`).
+- `currentSpotId` keeps a nullable pointer to `StorageSpot`; `@unique` enforces one vehicle per spot.
+- Relations: `owner`, `currentSpot`, `photos`, `statusEvents`, `conciergeRequests`.
+
+### StorageSpot
+- Single parking/garage bay.
+- Fields: `code` (unique human-friendly identifier), `displayName`, `size?`, `level?`, `climate?`, `notes?`.
+- Relation: optional `vehicle` (back-reference from `Vehicle.currentSpot`) and `statusEvents`.
+
+### VehiclePhoto
+- Stores photo gallery entries.
+- Fields: `url`, `caption?`, `isPrimary` flag.
+- Relation: belongs to `Vehicle`.
+
+### VehicleStatusEvent
+- Append-only history of `AccessStatus` transitions.
+- Fields: `status`, `spotId?`, `occurredAt`, `note?`, `recordedBy?`.
+- Relations: belongs to `Vehicle`; optional link to a `StorageSpot`.
+
+## Enums
+- `AccessStatus`: `IN`, `OUT`, `MAINTENANCE`.
+- `MembershipTier`: `FOUNDER`, `PREMIUM`, `STANDARD`.
+- `OwnerStatus`: `ACTIVE`, `PENDING`, `SUSPENDED`.
+
+## Migration Workflow
+1. Update `prisma/schema.prisma`.
+2. `npx prisma migrate dev --name <change>` locally to generate SQL under `prisma/migrations/`.
+3. Commit the schema + migration.
+4. Run `npx prisma generate` if the client is used outside Next.js server components.
+
+## Seed Data
+`prisma/seed.ts` wipes and repopulates Owners, StorageSpots, Vehicles, Photos, and StatusEvents with realistic demo data:
+
+```bash
+npx prisma db seed
+```
+
+It creates:
+- 3 members (Founder, Premium, Standard tiers)
+- 4 named storage spots
+- 5 hero vehicles with mixed status (`IN`, `OUT`, `MAINTENANCE`)
+- Photos + status history per vehicle
+
+This seed is safe for local dev only (it truncates tables before inserting).

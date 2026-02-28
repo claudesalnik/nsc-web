@@ -1,24 +1,54 @@
 # Newcastle Sunday Club Schema Notes
 
-## Overview
-- **ORM/Data layer**: Prisma with PostgreSQL (Vercel Postgres ready).
-- **Core entities**:
-  - `Owner` — club members. Minimal PII plus optional membership meta.
-  - `Vehicle` — canonical description + denormalized `currentStatus` and `currentSpotId` for fast dashboards.
-  - `StorageSpot` — numbered/named locations inside the facility.
-  - `VehiclePhoto` — media assets per vehicle (primary flag enforced in app logic).
-  - `VehicleStatusEvent` — append-only history of check-ins/checkouts and moves.
+## Core Entities
 
-## Design Decisions
-1. **Status as enum + log**: `Vehicle.currentStatus` powers fast filters, while `VehicleStatusEvent` captures history (who/when/where). The enum (`IN_STORAGE`, `CHECKED_OUT`) keeps logic simple but can be extended later.
-2. **Current spot caching**: `Vehicle.currentSpotId` provides O(1) lookups for dashboards. Historical moves still live in the status table with optional `spotId` references.
-3. **Storage spot exclusivity**: `currentSpotId` is `@unique`, preventing double-booked spots at the DB level. If a vehicle is checked out, the field is `NULL`.
-4. **Photos without partial unique constraints**: PostgreSQL can’t do partial uniques via Prisma yet, so the “single primary photo” rule is enforced in application logic. Indexing `vehicleId` keeps gallery queries quick.
-5. **Seed realism**: `prisma/seed.ts` creates three members, four spots, and five vehicles with mixed statuses and realistic history, ready for demo environments.
-6. **Referential safety**: `Vehicle.currentSpot` and `VehicleStatusEvent.spot` now use `onDelete: SetNull` (plus cascading updates) so removing or renaming a spot never blocks writes and automatically frees dependent rows.
-7. **Query-ready indexes**: Compound indexes on `(ownerId, currentStatus)` and `(status, occurredAt)` support dashboard filters without table scans.
+| Model | Purpose | Key Fields |
+| --- | --- | --- |
+| `Owner` | Members of the club. Lightweight PII + membership metadata. | `fullName`, `email`, `membershipTier`, `status`, `notes` |
+| `Vehicle` | Canonical record for every stored vehicle. | `vin`, `year`, `make`, `model`, `trim`, `color`, `currentStatus`, `currentSpotId` |
+| `StorageSpot` | Physical slots inside the facility. | `code`, `displayName`, `size`, `level`, `climate` |
+| `VehiclePhoto` | Photo gallery per vehicle with primary flag. | `url`, `caption`, `isPrimary` |
+| `VehicleStatusEvent` | Append-only log of every check-in/out or move. | `status`, `spotId`, `occurredAt`, `recordedBy` |
 
-## Next Steps
-- Run `npx prisma migrate dev --name init_schema` to create the first migration.
-- Execute `npx prisma db seed` after configuring `package.json` with `prisma/seed.ts` (e.g. `ts-node` or `tsx`).
-- Extend `Owner` or `VehicleStatusEvent` with auth user IDs once identity management lands.
+## Enums
+
+- `AccessStatus`: `IN`, `OUT`, `MAINTENANCE` — covers day-to-day state plus "vehicle pulled for service". A denormalized copy of the most recent `VehicleStatusEvent.status` lives on the `Vehicle` row for instant filtering.
+- `MembershipTier`: `FOUNDER`, `PREMIUM`, `STANDARD` — drives accent colours, permissions, and billing later on.
+- `OwnerStatus`: `ACTIVE`, `PENDING`, `SUSPENDED` — gives ops a light-weight hold toggle.
+
+## Relationships & Guarantees
+
+1. **Owner → Vehicle (1:N)**
+   - `Vehicle.ownerId` references `Owner.id` with `onDelete: Cascade`, ensuring dangling vehicles cannot exist.
+2. **Vehicle ↔ StorageSpot (1:1 optional)**
+   - `Vehicle.currentSpotId` is nullable + `@unique`, so a spot can host at most one vehicle.
+   - Removing a spot sets `currentSpotId` to `NULL` thanks to `onDelete: SetNull`.
+3. **Vehicle → VehiclePhoto (1:N)**
+   - Cascades on delete; primary photo enforcement happens in app logic since Prisma/Postgres partial uniques aren’t available yet.
+4. **Vehicle → VehicleStatusEvent (1:N)**
+   - Every ingress/egress/relocation writes a new event row. Composite indexes on `(vehicleId, occurredAt)` keep timelines fast.
+5. **StorageSpot → VehicleStatusEvent (1:N optional)**
+   - `spotId` is nullable so we can log OUT events where a vehicle isn’t in a spot.
+
+## Indexing Strategy
+
+- `Owner`: indexes on `fullName`, `membershipTier`, `status` for admin search filters.
+- `Vehicle`: compound indexes on `(ownerId, currentStatus)` and `(make, model)` to power owner dashboards and search; unique VIN + unique `currentSpotId` prevent duplicates.
+- `VehiclePhoto`: index on `vehicleId` for gallery fetches.
+- `VehicleStatusEvent`: `(vehicleId, occurredAt)`, `(spotId)`, `(status, occurredAt)` support history timelines and spot occupancy lookups.
+
+## Seed & Migration Notes
+
+- Initial migration: `prisma/migrations/202402280001_vehicle_base/migration.sql` (created with `npx prisma migrate dev --name vehicle_base`).
+- Seed script (`prisma/seed.ts`) fabricates 3 owners, 4 spots, and 5 vehicles with rich photo + status histories so UI work instantly has data.
+- Run locally:
+  ```bash
+  npx prisma migrate deploy
+  npx prisma db seed
+  ```
+
+## Future Extensions
+
+- Add `StorageZone` / `StorageSpotType` lookup tables once the facility layout is final.
+- Tie `Owner` rows back to NextAuth users via `userId` once auth lands.
+- Introduce `VehicleDocument` for registration/insurance scans when compliance scope grows.

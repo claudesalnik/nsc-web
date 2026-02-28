@@ -1,106 +1,100 @@
-import clsx from 'clsx';
+import { redirect } from "next/navigation";
 
-import styles from './PortalBilling.module.css';
+import { auth } from "@/auth";
+import { getMemberPortalData } from "@/lib/portal/member-data";
 
-type InvoiceStatus = 'paid' | 'pending';
+const manageSubscriptionUrl = "https://billing.stripe.com/p/test_members_portal";
 
-type Invoice = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  status: InvoiceStatus;
-};
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
-const invoices: Invoice[] = [
-  {
-    id: 'inv-2402',
-    date: 'Feb 1, 2026',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-  {
-    id: 'inv-2401',
-    date: 'Jan 1, 2026',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-  {
-    id: 'inv-2312',
-    date: 'Dec 1, 2025',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-  {
-    id: 'inv-2311',
-    date: 'Nov 1, 2025',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'pending',
-  },
-];
+export default async function BillingPage() {
+  const session = await auth();
 
-const manageSubscriptionUrl = 'https://billing.stripe.com/p/test_members_portal';
+  if (!session?.user?.email) {
+    redirect("/login?session=expired");
+  }
 
-export default function BillingPage() {
+  const portal = await getMemberPortalData(session.user.email);
+  const billing = portal.billing;
+  const nextBilling = dateFormatter.format(new Date(billing.nextChargeDate));
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1>Billing &amp; Subscription</h1>
-        <p>Track your storage plan, invoices, and payment status in one place.</p>
+    <div className="space-y-6">
+      <header>
+        <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Billing</p>
+        <h1 className="text-2xl font-semibold text-[var(--text)]">Storage subscription</h1>
+        <p className="text-sm text-[rgba(var(--text-rgb),0.65)]">Plan metadata + invoices rendered in a format that’s easy to skim while parked at the gate.</p>
       </header>
 
-      <section className={styles.card}>
-        <div className={styles.planMeta}>
-          <span className={styles.planStatus}>Current Plan</span>
-          <span className={styles.planName}>Monthly Storage — North Bay</span>
-          <span className={styles.planPrice}>
-            $825
-            <span className={styles.planPriceUnit}>/mo</span>
-          </span>
-          <p>Dedicated North Bay unit, climate monitoring, access control included.</p>
+      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface2-rgb),0.95)]">
+        <div>
+          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Current plan</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">{billing.planName}</h2>
+          <p className="text-sm text-[rgba(var(--text-rgb),0.65)]">{billing.description}</p>
         </div>
-        <a href={manageSubscriptionUrl} className={styles.manageButton} target="_blank" rel="noreferrer">
-          Manage Subscription
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <p className="text-[0.7rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Monthly</p>
+            <p className="text-4xl font-semibold text-[var(--text)]">${billing.monthlyAmount.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[0.7rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Next billing</p>
+            <p className="text-xl font-semibold text-[var(--text)]">{nextBilling}</p>
+            <p className="text-xs text-[rgba(var(--text-rgb),0.6)]">Auto-charge on file</p>
+          </div>
+        </div>
+        <a
+          href={manageSubscriptionUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="tappable-area inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-[rgba(var(--blue-rgb),0.45)] bg-[rgba(var(--blue-rgb),0.15)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-[var(--text)]"
+        >
+          Manage subscription
         </a>
       </section>
 
-      <section className={styles.card}>
-        <div className={styles.sectionHeader}>
-          <h3>Invoice History</h3>
+      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.5)] bg-[rgba(var(--surface3-rgb),0.92)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Invoices</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">History</h2>
+          </div>
+          <span className="text-sm text-[rgba(var(--text-rgb),0.65)]">Auto-sync via Stripe</span>
         </div>
-        <div className={styles.tableWrapper}>
-          <table className={styles.invoiceTable}>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
             <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Description</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Status</th>
-                <th scope="col">Invoice</th>
+              <tr className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">
+                <th className="pb-3 pr-4 font-normal">Date</th>
+                <th className="pb-3 pr-4 font-normal">Description</th>
+                <th className="pb-3 pr-4 font-normal">Amount</th>
+                <th className="pb-3 pr-4 font-normal">Status</th>
+                <th className="pb-3 font-normal">Invoice</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.map(invoice => (
-                <tr key={invoice.id}>
-                  <td>{invoice.date}</td>
-                  <td>{invoice.description}</td>
-                  <td>${invoice.amount.toFixed(2)}</td>
-                  <td>
+              {billing.invoices.map((invoice) => (
+                <tr key={invoice.id} className="border-t border-[rgba(var(--border-rgb),0.2)]">
+                  <td className="py-3 pr-4 text-[var(--text)]">{dateFormatter.format(new Date(invoice.date))}</td>
+                  <td className="py-3 pr-4 text-[rgba(var(--text-rgb),0.8)]">{invoice.description}</td>
+                  <td className="py-3 pr-4 text-[var(--text)]">${invoice.amount.toFixed(2)}</td>
+                  <td className="py-3 pr-4">
                     <span
-                      className={clsx(
-                        styles.statusDot,
-                        invoice.status === 'paid' ? styles.statusPaid : styles.statusPending,
-                      )}
+                      className={`rounded-2xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${
+                        invoice.status === "paid"
+                          ? "bg-[rgba(var(--success-rgb),0.2)] text-[var(--success)]"
+                          : "bg-[rgba(var(--amber-rgb),0.2)] text-[var(--amber)]"
+                      }`}
                     >
-                      {invoice.status === 'paid' ? 'Paid' : 'Pending'}
+                      {invoice.status}
                     </span>
                   </td>
-                  <td>
-                    <a href={`#${invoice.id}`} className={styles.downloadLink}>
+                  <td className="py-3">
+                    <a href={invoice.downloadUrl ?? manageSubscriptionUrl} className="text-sm font-semibold text-[var(--blue)]">
                       Download
                     </a>
                   </td>

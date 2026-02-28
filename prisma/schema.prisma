@@ -1,0 +1,123 @@
+// Prisma schema for Newcastle Sunday Club vehicle storage platform
+// Database: PostgreSQL (Vercel Postgres compatible)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccessStatus {
+  IN
+  OUT
+  MAINTENANCE
+}
+
+enum MembershipTier {
+  FOUNDER
+  PREMIUM
+  STANDARD
+}
+
+enum OwnerStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+model Owner {
+  id             String          @id @default(cuid())
+  fullName       String
+  email          String          @unique
+  phone          String?         @db.VarChar(32)
+  city           String?
+  company        String?
+  membershipTag  String?         @db.VarChar(64)
+  membershipTier MembershipTier  @default(PREMIUM)
+  status         OwnerStatus     @default(ACTIVE)
+  notes          String?
+  joinedAt       DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  vehicles       Vehicle[]
+
+  @@index([fullName])
+  @@index([membershipTier])
+  @@index([status])
+}
+
+model Vehicle {
+  id             String           @id @default(cuid())
+  ownerId        String
+  vin            String           @unique @db.VarChar(32)
+  year           Int
+  make           String
+  model          String
+  trim           String?
+  color          String?
+  currentStatus  AccessStatus     @default(IN)
+  currentSpotId  String?          @unique
+  acquiredAt     DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  owner          Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  currentSpot    StorageSpot?     @relation(fields: [currentSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  photos         VehiclePhoto[]
+  statusEvents   VehicleStatusEvent[]
+
+  @@index([ownerId])
+  @@index([ownerId, currentStatus])
+  @@index([make, model])
+  @@index([currentStatus])
+}
+
+model StorageSpot {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  displayName String
+  size        String?    // e.g. "Standard", "Oversize"
+  level       String?    // e.g. "Main Floor", "Basement"
+  climate     String?    // e.g. "Standard", "Climate"
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  vehicle     Vehicle?
+  statusEvents VehicleStatusEvent[]
+}
+
+model VehiclePhoto {
+  id         String   @id @default(cuid())
+  vehicleId  String
+  url        String
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+}
+
+model VehicleStatusEvent {
+  id          String         @id @default(cuid())
+  vehicleId   String
+  spotId      String?
+  status      AccessStatus
+  occurredAt  DateTime       @default(now())
+  note        String?
+  recordedBy  String?        // staff initials or user id
+
+  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  spot        StorageSpot?   @relation(fields: [spotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([vehicleId, occurredAt])
+  @@index([spotId])
+  @@index([status, occurredAt])
+}

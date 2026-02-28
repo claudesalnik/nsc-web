@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { MapPin, Lock, Calendar, ArrowRight, Car } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Lock, Calendar, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -13,19 +14,15 @@ export default function Home() {
         background: 'linear-gradient(to bottom, rgba(14,14,14,0.95), transparent)',
         backdropFilter: 'blur(8px)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Logo placeholder — replace with uploaded logo */}
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'var(--blue-glow)',
-            border: '1px solid var(--blue)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Car size={18} color="var(--blue)" />
-          </div>
-          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '0.02em', color: 'var(--text)' }}>
-            Newcastle Sunday Club
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Image
+            src="/nsc-logo.jpg"
+            alt="Newcastle Sunday Club"
+            width={80}
+            height={80}
+            style={{ filter: 'invert(1)', objectFit: 'contain' }}
+            priority
+          />
         </div>
         <Link href="/login" style={{
           display: 'flex', alignItems: 'center', gap: 6,

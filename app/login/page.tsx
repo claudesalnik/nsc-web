@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Car, ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   return (
@@ -20,21 +21,17 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%',
-            background: 'var(--blue-glow)',
-            border: '1px solid var(--blue)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-          }}>
-            <Car size={24} color="var(--blue)" />
-          </div>
+          <Image
+            src="/nsc-logo.jpg"
+            alt="Newcastle Sunday Club"
+            width={120}
+            height={120}
+            style={{ filter: 'invert(1)', objectFit: 'contain', margin: '0 auto 16px', display: 'block' }}
+            priority
+          />
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
             Member Login
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--muted)' }}>
-            Newcastle Sunday Club
-          </p>
         </div>
 
         {/* Form */}

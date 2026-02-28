@@ -5,8 +5,8 @@
 | Model | Purpose | Key Fields |
 | --- | --- | --- |
 | `Owner` | Members of the club. Lightweight PII + membership metadata. | `fullName`, `email`, `membershipTier`, `status`, `notes` |
-| `Vehicle` | Canonical record for every stored vehicle. | `vin`, `year`, `make`, `model`, `trim`, `color`, `currentStatus`, `currentSpotId` |
-| `StorageSpot` | Physical slots inside the facility. | `code`, `displayName`, `size`, `level`, `climate` |
+| `Vehicle` | Canonical record for every stored vehicle. | `vin`, `year`, `make`, `model`, `trim`, `color`, `licensePlate`, `currentStatus`, `currentSpotId` |
+| `StorageSpot` | Physical slots inside the facility. | `code`, `displayName`, `size`, `level`, `climate`, `zone`, `section`, `rowLabel`, `isTransient` |
 | `VehiclePhoto` | Photo gallery per vehicle with primary flag. | `url`, `caption`, `isPrimary` |
 | `VehicleStatusEvent` | Append-only log of every check-in/out or move. | `status`, `spotId`, `occurredAt`, `recordedBy` |
 
@@ -30,12 +30,19 @@
 5. **StorageSpot → VehicleStatusEvent (1:N optional)**
    - `spotId` is nullable so we can log OUT events where a vehicle isn’t in a spot.
 
+
+## Metadata Callouts
+
+- `Vehicle.licensePlate` + `plateState` keep concierge workflows fast (search by plate, print on portal cards).
+- `StorageSpot` carries `zone`, `section`, `rowLabel`, and `isTransient` so the member hub can mirror the real facility layout without another lookup table.
+
 ## Indexing Strategy
 
 - `Owner`: indexes on `fullName`, `membershipTier`, `status` for admin search filters.
-- `Vehicle`: compound indexes on `(ownerId, currentStatus)` and `(make, model)` to power owner dashboards and search; unique VIN + unique `currentSpotId` prevent duplicates.
+- `Vehicle`: compound indexes on `(ownerId, currentStatus)` and `(make, model)` power owner dashboards; `licensePlate` gets its own index for concierge + gate searches; unique VIN + unique `currentSpotId` prevent duplicates.
 - `VehiclePhoto`: index on `vehicleId` for gallery fetches.
 - `VehicleStatusEvent`: `(vehicleId, occurredAt)`, `(spotId)`, `(status, occurredAt)` support history timelines and spot occupancy lookups.
+- `StorageSpot`: indexes on `zone` + `section` unlock facility heatmaps and “where is this car?” queries.
 
 ## Seed & Migration Notes
 

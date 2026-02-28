@@ -29,21 +29,22 @@ enum OwnerStatus {
 }
 
 model Owner {
-  id             String          @id @default(cuid())
+  id             String         @id @default(cuid())
   fullName       String
-  email          String          @unique
-  phone          String?         @db.VarChar(32)
+  email          String         @unique
+  phone          String?        @db.VarChar(32)
   city           String?
   company        String?
-  membershipTag  String?         @db.VarChar(64)
-  membershipTier MembershipTier  @default(PREMIUM)
-  status         OwnerStatus     @default(ACTIVE)
+  membershipTag  String?        @db.VarChar(64)
+  membershipTier MembershipTier @default(PREMIUM)
+  status         OwnerStatus    @default(ACTIVE)
   notes          String?
-  joinedAt       DateTime        @default(now())
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  joinedAt       DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  vehicles       Vehicle[]
+  vehicles          Vehicle[]
+  conciergeRequests ConciergeRequest[]
 
   @@index([fullName])
   @@index([membershipTier])
@@ -51,73 +52,117 @@ model Owner {
 }
 
 model Vehicle {
-  id             String           @id @default(cuid())
-  ownerId        String
-  vin            String           @unique @db.VarChar(32)
-  year           Int
-  make           String
-  model          String
-  trim           String?
-  color          String?
-  currentStatus  AccessStatus     @default(IN)
-  currentSpotId  String?          @unique
-  acquiredAt     DateTime?
-  notes          String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id            String       @id @default(cuid())
+  ownerId       String
+  vin           String       @unique @db.VarChar(32)
+  year          Int
+  make          String
+  model         String
+  trim          String?
+  color         String?
+  licensePlate  String?      @db.VarChar(16)
+  plateState    String?      @db.VarChar(16)
+  currentStatus AccessStatus @default(IN)
+  currentSpotId String?      @unique
+  acquiredAt    DateTime?
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  owner          Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  currentSpot    StorageSpot?     @relation(fields: [currentSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  photos         VehiclePhoto[]
-  statusEvents   VehicleStatusEvent[]
+  owner             Owner                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  currentSpot       StorageSpot?         @relation(fields: [currentSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  photos            VehiclePhoto[]
+  statusEvents      VehicleStatusEvent[]
+  conciergeRequests ConciergeRequest[]
 
   @@index([ownerId])
   @@index([ownerId, currentStatus])
   @@index([make, model])
   @@index([currentStatus])
+  @@index([licensePlate])
 }
 
 model StorageSpot {
-  id          String     @id @default(cuid())
-  code        String     @unique
+  id          String   @id @default(cuid())
+  code        String   @unique
   displayName String
-  size        String?    // e.g. "Standard", "Oversize"
-  level       String?    // e.g. "Main Floor", "Basement"
-  climate     String?    // e.g. "Standard", "Climate"
+  size        String? // e.g. "Standard", "Oversize"
+  level       String? // e.g. "Main Floor", "Basement"
+  climate     String? // e.g. "Standard", "Climate"
+  zone        String?  @db.VarChar(32)
+  section     String?  @db.VarChar(32)
+  rowLabel    String?  @db.VarChar(32)
+  isTransient Boolean  @default(false)
   notes       String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  vehicle     Vehicle?
+  vehicle      Vehicle?
   statusEvents VehicleStatusEvent[]
+
+  @@index([zone])
+  @@index([section])
 }
 
 model VehiclePhoto {
-  id         String   @id @default(cuid())
-  vehicleId  String
-  url        String
-  caption    String?
-  isPrimary  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  vehicleId String
+  url       String
+  caption   String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId])
 }
 
 model VehicleStatusEvent {
-  id          String         @id @default(cuid())
-  vehicleId   String
-  spotId      String?
-  status      AccessStatus
-  occurredAt  DateTime       @default(now())
-  note        String?
-  recordedBy  String?        // staff initials or user id
+  id         String       @id @default(cuid())
+  vehicleId  String
+  spotId     String?
+  status     AccessStatus
+  occurredAt DateTime     @default(now())
+  note       String?
+  recordedBy String? // staff initials or user id
 
-  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  spot        StorageSpot?   @relation(fields: [spotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  vehicle Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  spot    StorageSpot? @relation(fields: [spotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([vehicleId, occurredAt])
   @@index([spotId])
   @@index([status, occurredAt])
+}
+
+// ─── Concierge Requests ────────────────────────────────────────────────────
+
+enum ConciergeRequestType {
+  DETAILING
+  BATTERY_RUN
+  OTHER
+}
+
+enum ConciergeRequestStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+model ConciergeRequest {
+  id            String                 @id @default(cuid())
+  memberId      String // Owner.id
+  vehicleId     String? // optional: which vehicle
+  type          ConciergeRequestType
+  notes         String?
+  requestedDate DateTime?
+  status        ConciergeRequestStatus @default(PENDING)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  member  Owner    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([memberId])
+  @@index([status])
+  @@index([status, requestedDate])
 }

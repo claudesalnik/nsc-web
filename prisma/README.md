@@ -14,14 +14,14 @@ The Newcastle Sunday Club data model focuses on a clean separation between membe
 
 ### Vehicle
 - Represents a single stored vehicle.
-- Fields: `vin` (unique), `year`, `make`, `model`, `trim?`, `color?`, `notes?`.
+- Fields: `vin` (unique), `year`, `make`, `model`, `trim?`, `color?`, `licensePlate?`, `plateState?`, `notes?`.
 - Denormalized status cache: `currentStatus: AccessStatus` (`IN | OUT | MAINTENANCE`).
 - `currentSpotId` keeps a nullable pointer to `StorageSpot`; `@unique` enforces one vehicle per spot.
 - Relations: `owner`, `currentSpot`, `photos`, `statusEvents`, `conciergeRequests`.
 
 ### StorageSpot
 - Single parking/garage bay.
-- Fields: `code` (unique human-friendly identifier), `displayName`, `size?`, `level?`, `climate?`, `notes?`.
+- Fields: `code` (unique human-friendly identifier), `displayName`, `size?`, `level?`, `climate?`, `zone?`, `section?`, `rowLabel?`, `isTransient`, `notes?`.
 - Relation: optional `vehicle` (back-reference from `Vehicle.currentSpot`) and `statusEvents`.
 
 ### VehiclePhoto

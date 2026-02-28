@@ -104,6 +104,7 @@ function mapVehicleToCard(vehicle: VehicleWithRelations, profile: MemberDirector
     lastMovement: formatDateTime(latestEvent?.occurredAt),
     battery: vehicle.currentStatus === AccessStatus.IN ? "Maintainer" : "External",
     fuel: vehicle.currentStatus === AccessStatus.IN ? "⅘ tank" : "Track fill",
+    plate: vehicle.licensePlate ?? undefined,
   };
 }
 
@@ -168,11 +169,11 @@ export const getMemberPortalData = cache(async (userEmail: string): Promise<Memb
     vehicles,
     hero: {
       bayLabel: firstSpot?.code ?? profile.storage.spotLabel,
-      section: profile.storage.section,
-      zone: profile.storage.zone,
-      humidity: profile.storage.humidity,
+      section: firstSpot?.section ?? profile.storage.section,
+      zone: firstSpot?.zone ?? profile.storage.zone,
+      humidity: firstSpot?.climate ?? profile.storage.humidity,
       gateCode: profile.storage.gate.code,
-      rowMapLabel: profile.storage.rowMapLabel,
+      rowMapLabel: firstSpot?.rowLabel ?? profile.storage.rowMapLabel,
       lastVisit: formatDateTime(lastVisit),
       conciergeEta: profile.storage.conciergeEta,
     },

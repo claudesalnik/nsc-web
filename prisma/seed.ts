@@ -59,7 +59,11 @@ async function main() {
         displayName: 'Aisle A · Spot 01',
         size: 'Standard',
         level: 'Main Floor',
-        climate: 'Climate'
+        climate: 'Climate',
+        zone: 'Aisle A',
+        section: 'Main Floor',
+        rowLabel: 'Row A',
+        isTransient: false
       }
     }),
     prisma.storageSpot.create({
@@ -68,7 +72,11 @@ async function main() {
         displayName: 'Aisle A · Spot 02',
         size: 'Standard',
         level: 'Main Floor',
-        climate: 'Climate'
+        climate: 'Climate',
+        zone: 'Aisle A',
+        section: 'Main Floor',
+        rowLabel: 'Row A',
+        isTransient: false
       }
     }),
     prisma.storageSpot.create({
@@ -77,7 +85,11 @@ async function main() {
         displayName: 'Basement · Vault 1',
         size: 'Oversize',
         level: 'Lower Level',
-        climate: 'Standard'
+        climate: 'Standard',
+        zone: 'Vault B',
+        section: 'Lower Level',
+        rowLabel: 'Vault Row 1',
+        isTransient: false
       }
     }),
     prisma.storageSpot.create({
@@ -86,7 +98,11 @@ async function main() {
         displayName: 'Checkout Lane 1',
         size: 'Transient',
         level: 'Main Floor',
-        climate: 'Transient'
+        climate: 'Transient',
+        zone: 'Checkout',
+        section: 'Main Floor',
+        rowLabel: 'Lane CX',
+        isTransient: true
       }
     })
   ]);
@@ -103,6 +119,8 @@ async function main() {
       model: '911',
       trim: 'Carrera 4S',
       color: 'Polar Silver',
+      licensePlate: 'NSC964',
+      plateState: 'CA',
       currentStatus: AccessStatus.IN,
       currentSpotId: spotsByCode['A01'].id,
       photos: {
@@ -134,6 +152,8 @@ async function main() {
       make: 'Ferrari',
       model: '458 Speciale',
       color: 'Rosso Corsa',
+      licensePlate: 'NSC458',
+      plateState: 'CA',
       currentStatus: AccessStatus.OUT,
       currentSpotId: null,
       notes: 'Due for tire inspection on return.',
@@ -177,6 +197,8 @@ async function main() {
       model: 'M6',
       trim: 'Competition',
       color: 'San Marino Blue',
+      licensePlate: 'M6CA77',
+      plateState: 'CA',
       currentStatus: AccessStatus.IN,
       currentSpotId: spotsByCode['B01'].id,
       photos: {
@@ -213,6 +235,8 @@ async function main() {
       make: 'Jeep',
       model: 'Grand Cherokee Trackhawk',
       color: 'Granite Crystal',
+      licensePlate: 'TRKHWK1',
+      plateState: 'CA',
       currentStatus: AccessStatus.IN,
       currentSpotId: spotsByCode['A02'].id,
       photos: {
@@ -244,6 +268,8 @@ async function main() {
       make: 'Aston Martin',
       model: 'Vantage',
       color: 'Onyx Black',
+      licensePlate: 'NSC007',
+      plateState: 'CA',
       currentStatus: AccessStatus.OUT,
       currentSpotId: null,
       photos: {

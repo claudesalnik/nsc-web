@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import { serializeMember, serializeSpot, serializeVehicle } from '@/app/admin/data/serializers';
 import MembersDashboard from './members-dashboard';

@@ -1,283 +1,155 @@
-import Link from 'next/link';
-import clsx from 'clsx';
-import { DoorOpen, AlertTriangle, History } from 'lucide-react';
+import Link from "next/link";
+import clsx from "clsx";
+import { AlertTriangle, DoorOpen, History, MapPin } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import styles from './PortalDashboard.module.css';
-
-type VehicleStatus = 'STORED' | 'OUT';
-
-type PortalVehicle = {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  color: string;
-  storageSpot: {
-    label: string;
-    section: string;
-    zone: string;
-  };
-  status: VehicleStatus;
-};
-
-type AccessEvent = {
-  id: string;
-  timestamp: string;
-  vehicle: string;
-  eventType: 'IN' | 'OUT';
-  note?: string;
-};
-
-type BillingEntry = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  status: 'paid' | 'pending';
-};
-
-const vehicles: PortalVehicle[] = [
-  {
-    id: 'veh-911',
-    year: 2022,
-    make: 'Porsche',
-    model: '911 GT3',
-    color: 'Paint-to-Sample Viola',
-    storageSpot: { label: 'NB-A12', section: 'Row A', zone: 'North Bay' },
-    status: 'STORED',
-  },
-  {
-    id: 'veh-gt40',
-    year: 1967,
-    make: 'Ford',
-    model: 'GT40 MK I',
-    color: 'Heritage Blue',
-    storageSpot: { label: 'HB-02', section: 'Heritage', zone: 'Heritage Vault' },
-    status: 'OUT',
-  },
-  {
-    id: 'veh-g63',
-    year: 2020,
-    make: 'Mercedes-AMG',
-    model: 'G 63',
-    color: 'Night Black Magno',
-    storageSpot: { label: 'NA-07', section: 'Annex', zone: 'North Annex' },
-    status: 'STORED',
-  },
-];
-
-const storageAssignment = {
-  bayLabel: 'NB-A17',
-  section: 'Row A',
-  zone: 'North Bay',
-  accessWindow: '24/7 — Badge + PIN',
-  lastVisit: 'Feb 22 · 18:42',
-  gateCode: '7329 · A',
-};
-
-const accessEvents: AccessEvent[] = [
-  {
-    id: 'ae-01',
-    timestamp: 'Feb 22 · 18:42',
-    vehicle: '2022 Porsche 911 GT3',
-    eventType: 'IN',
-    note: 'Vehicle returned by concierge',
-  },
-  {
-    id: 'ae-02',
-    timestamp: 'Feb 18 · 09:11',
-    vehicle: '1967 Ford GT40 MK I',
-    eventType: 'OUT',
-    note: 'Track day checkout',
-  },
-  {
-    id: 'ae-03',
-    timestamp: 'Feb 11 · 21:07',
-    vehicle: '2020 Mercedes-AMG G 63',
-    eventType: 'IN',
-    note: 'Night access via member fob',
-  },
-];
-
-const billingHistory: BillingEntry[] = [
-  {
-    id: 'inv-2402',
-    date: 'Feb 1, 2026',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-  {
-    id: 'inv-2401',
-    date: 'Jan 1, 2026',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-  {
-    id: 'inv-2312',
-    date: 'Dec 1, 2025',
-    description: 'Monthly Storage — North Bay A',
-    amount: 825,
-    status: 'paid',
-  },
-];
+import { auth } from "@/auth";
+import { AccessInfo } from "@/components/AccessInfo";
+import { VehicleCard } from "@/components/VehicleCard";
+import { getMemberPortalData } from "@/lib/portal/member-data";
 
 const quickActions = [
-  { label: 'Request Access', icon: DoorOpen },
-  { label: 'Report Issue', icon: AlertTriangle },
-  { label: 'View Access History', icon: History },
+  { label: "Request pull-up", icon: DoorOpen },
+  { label: "Report issue", icon: AlertTriangle },
+  { label: "View full history", icon: History },
 ];
 
-const vehicleStatusCopy: Record<VehicleStatus, { label: string; badgeClass: string }> = {
-  STORED: { label: 'In Storage', badgeClass: styles.statusIn },
-  OUT: { label: 'Checked Out', badgeClass: styles.statusOut },
-};
+export default async function PortalDashboard() {
+  const session = await auth();
 
-export default function PortalDashboard() {
+  if (!session?.user?.email) {
+    redirect("/login?session=expired");
+  }
+
+  const portal = await getMemberPortalData(session.user.email);
+  const storage = portal.hero;
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <span className={styles.tag}>Member Dashboard</span>
-        <h1 className={styles.title}>Welcome back, Oleg.</h1>
-        <p className={styles.subtitle}>
-          Everything is quiet at the clubhouse. Climate systems nominal, last motion event 02:14.
-        </p>
-      </header>
-
-      <section className={clsx(styles.sectionCard)} id="vehicles">
-        <div className={styles.sectionHeader}>
-          <h3>My Vehicles</h3>
-          <span>{vehicles.length} stored vehicles</span>
+    <div className="space-y-5">
+      <section className="space-y-4">
+        <div className="mobile-card border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface2-rgb),0.95)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Storage spot</p>
+              <p className="mt-1 text-4xl font-semibold tracking-[0.4em] text-[var(--text)]">{storage.bayLabel}</p>
+              <p className="text-sm text-[rgba(var(--text-rgb),0.65)]">{storage.zone} · {storage.section}</p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.4)] bg-[rgba(var(--surface3-rgb),0.7)] px-4 py-3 text-right">
+              <p className="text-[0.7rem] uppercase tracking-[0.45em] text-[rgba(var(--text-rgb),0.5)]">Gate code</p>
+              <p className="text-2xl font-semibold tracking-[0.4em]">{storage.gateCode}</p>
+              <p className="text-xs text-[rgba(var(--text-rgb),0.6)]">Updated via concierge</p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-[rgba(var(--text-rgb),0.75)] sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.6)] p-3">
+              <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Zone humidity</p>
+              <p className="mt-1 text-base font-semibold text-[var(--text)]">{storage.humidity}</p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.6)] p-3">
+              <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Last visit</p>
+              <p className="mt-1 text-base font-semibold text-[var(--text)]">{storage.lastVisit ?? "Pending"}</p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.6)] p-3">
+              <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Concierge</p>
+              <p className="mt-1 text-base font-semibold text-[var(--text)]">{storage.conciergeEta ?? "On call"}</p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.6)] p-3">
+              <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Row map</p>
+              <p className="mt-1 flex items-center gap-1 text-base font-semibold text-[var(--text)]">
+                <MapPin className="h-4 w-4 text-[var(--blue)]" aria-hidden="true" /> {storage.rowMapLabel}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className={styles.vehicleGrid}>
-          {vehicles.map(vehicle => (
-            <article key={vehicle.id} className={styles.vehicleCard}>
-              <div className={styles.vehicleThumb} aria-hidden />
-              <div className={styles.vehicleMeta}>
-                <strong>
-                  {vehicle.year} {vehicle.make} {vehicle.model}
-                </strong>
-                <span>
-                  {vehicle.color} · {vehicle.storageSpot.zone} · {vehicle.storageSpot.label}
-                </span>
-              </div>
-              <span className={clsx(styles.statusBadge, vehicleStatusCopy[vehicle.status].badgeClass)}>
-                {vehicleStatusCopy[vehicle.status].label}
-              </span>
-            </article>
+        <AccessInfo {...portal.gate} />
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Garage status</p>
+            <h2 className="text-xl font-semibold text-[var(--text)]">My vehicles</h2>
+          </div>
+          <Link href="/portal/vehicles" className="text-sm font-semibold text-[var(--blue)]">
+            Manage →
+          </Link>
+        </div>
+        <div className="space-y-4">
+          {portal.vehicles.map((vehicle) => (
+            <VehicleCard key={vehicle.id} vehicle={vehicle} primaryLabel="Details" secondaryLabel="Request pull-up" />
           ))}
         </div>
       </section>
 
-      <section className={clsx(styles.sectionCard, styles.storageCard)}>
-        <div className={styles.sectionHeader}>
-          <h3>Storage Assignment</h3>
-          <span>{storageAssignment.zone} · {storageAssignment.section}</span>
-        </div>
-
-        <div className={styles.storageDetails}>
-          <div className={styles.storageDetailBlock}>
-            <label>Bay Label</label>
-            <span>{storageAssignment.bayLabel}</span>
+      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.6)] bg-[rgba(var(--surface2-rgb),0.9)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Live log</p>
+            <h3 className="text-lg font-semibold text-[var(--text)]">Access history</h3>
           </div>
-          <div className={styles.storageDetailBlock}>
-            <label>Section</label>
-            <span>{storageAssignment.section}</span>
-          </div>
-          <div className={styles.storageDetailBlock}>
-            <label>Zone</label>
-            <span>{storageAssignment.zone}</span>
-          </div>
-          <div className={styles.storageDetailBlock}>
-            <label>Access Window</label>
-            <span>{storageAssignment.accessWindow}</span>
-          </div>
-          <div className={styles.storageDetailBlock}>
-            <label>Last Visit</label>
-            <span>{storageAssignment.lastVisit}</span>
-          </div>
-          <div className={styles.storageDetailBlock}>
-            <label>Gate Code</label>
-            <span className={styles.accessCode}>{storageAssignment.gateCode}</span>
-          </div>
-        </div>
-      </section>
-
-      <section className={clsx(styles.sectionCard, styles.billingCard)}>
-        <div className={styles.sectionHeader}>
-          <h3>Billing Snapshot</h3>
-          <Link href="/portal/billing" className={styles.sectionLink}>
-            View billing →
+          <Link href="/portal/access" className="text-sm font-semibold text-[var(--blue)]">
+            Full view
           </Link>
         </div>
-        <ul className={styles.billingHistoryList}>
-          {billingHistory.map(entry => (
-            <li key={entry.id}>
+        <ul className="space-y-3">
+          {portal.accessEvents.map((event) => (
+            <li key={event.id} className="flex items-center justify-between rounded-2xl border border-[rgba(var(--border-rgb),0.4)] bg-[rgba(var(--surface3-rgb),0.65)] px-4 py-3">
               <div>
-                <p className={styles.billingDate}>{entry.date}</p>
-                <p className={styles.billingDescription}>{entry.description}</p>
+                <p className="text-base font-semibold text-[var(--text)]">{event.context}</p>
+                <p className="text-sm text-[rgba(var(--text-rgb),0.65)]">{event.meta ?? "Concierge desk"}</p>
+                {event.timestamp && <p className="text-xs text-[rgba(var(--text-rgb),0.55)]">{event.timestamp}</p>}
               </div>
-              <div className={styles.billingAmountBlock}>
-                <span className={styles.billingAmount}>${entry.amount.toFixed(2)}</span>
-                <span className={clsx(styles.billingStatus, entry.status === 'paid' ? styles.billingPaid : styles.billingPending)}>
-                  {entry.status === 'paid' ? 'Paid' : 'Pending'}
-                </span>
+              <div
+                className={clsx(
+                  "flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-semibold uppercase tracking-[0.4em]",
+                  event.direction === "IN"
+                    ? "bg-[rgba(var(--blue-rgb),0.18)] text-[var(--blue)]"
+                    : "bg-[rgba(var(--amber-rgb),0.18)] text-[var(--amber)]"
+                )}
+              >
+                {event.direction}
               </div>
             </li>
           ))}
         </ul>
-        <Link href="/portal/billing" className={styles.billingCta}>
-          View full billing history
-        </Link>
       </section>
 
-      <section className={clsx(styles.sectionCard, styles.accessCard)} id="access-history">
-        <div className={styles.sectionHeader}>
-          <h3>Access &amp; Instructions</h3>
-          <span>Automated security tracking</span>
-        </div>
-        <div className={styles.accessGrid}>
-          <div className={styles.accessInstructions}>
-            <h4>Access instructions</h4>
-            <p>Use your member key fob for bay access. Concierge unlock is available on request.</p>
-            <ul>
-              <li>Primary keypad PIN: <strong>2046 · ✶</strong></li>
-              <li>Loading dock call box: &ldquo;Member 09&rdquo;</li>
-              <li>Tire warmers + charge prep available with 2h notice</li>
-            </ul>
+      <section className="mobile-card space-y-4 border-[rgba(var(--border-rgb),0.55)] bg-[rgba(var(--surface2-rgb),0.92)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Billing</p>
+            <h3 className="text-lg font-semibold text-[var(--text)]">Plan snapshot</h3>
           </div>
-          <div className={styles.accessHistory}>
-            <h4>Recent access history</h4>
-            <ul>
-              {accessEvents.map(event => (
-                <li key={event.id}>
-                  <div>
-                    <p className={styles.accessTimestamp}>{event.timestamp}</p>
-                    <p className={styles.accessVehicle}>{event.vehicle}</p>
-                    {event.note && <p className={styles.accessNote}>{event.note}</p>}
-                  </div>
-                  <span className={clsx(styles.accessBadge, event.eventType === 'IN' ? styles.accessIn : styles.accessOut)}>
-                    {event.eventType === 'IN' ? 'In' : 'Out'}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <Link href="/portal/billing" className="text-sm font-semibold text-[var(--blue)]">
+            View invoices
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.7)] p-3">
+            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Plan</p>
+            <p className="mt-1 text-base font-semibold text-[var(--text)]">{portal.billing.planName}</p>
+          </div>
+          <div className="rounded-2xl border border-[rgba(var(--border-rgb),0.35)] bg-[rgba(var(--surface3-rgb),0.7)] p-3">
+            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-[rgba(var(--text-rgb),0.55)]">Monthly</p>
+            <p className="mt-1 text-base font-semibold text-[var(--text)]">${portal.billing.monthlyAmount.toLocaleString()}</p>
           </div>
         </div>
       </section>
 
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <h3>Quick Actions</h3>
-          <span>Need something handled?</span>
+      <section className="mobile-card space-y-3 border-[rgba(var(--border-rgb),0.45)] bg-[rgba(var(--surface3-rgb),0.9)]">
+        <div>
+          <p className="text-xs uppercase tracking-[0.5em] text-[rgba(var(--text-rgb),0.55)]">Need something?</p>
+          <h3 className="text-lg font-semibold text-[var(--text)]">Quick actions</h3>
         </div>
-
-        <div className={styles.quickActions}>
-          {quickActions.map(action => (
-            <button type="button" key={action.label} className={styles.quickActionButton}>
-              <action.icon size={18} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {quickActions.map((action) => (
+            <button
+              type="button"
+              key={action.label}
+              className="tappable-area flex items-center gap-3 rounded-2xl border border-[rgba(var(--border-rgb),0.45)] bg-[rgba(var(--surface2-rgb),0.7)] px-4 py-3 text-sm font-semibold text-[var(--text)]"
+            >
+              <action.icon className="h-5 w-5 text-[var(--blue)]" aria-hidden="true" />
               {action.label}
             </button>
           ))}

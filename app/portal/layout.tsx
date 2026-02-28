@@ -1,82 +1,49 @@
-'use client';
+import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Car, CreditCard, History, LogOut } from 'lucide-react';
-import clsx from 'clsx';
+import { auth } from "@/auth";
+import { PortalChrome } from "@/components/portal/PortalChrome";
+import { getMemberPortalData } from "@/lib/portal/member-data";
 
-import styles from './PortalLayout.module.css';
+export default async function PortalLayout({ children }: { children: ReactNode }) {
+  const session = await auth();
 
-const navItems = [
-  { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
-  { label: 'My Vehicles', href: '/portal#vehicles', icon: Car },
-  { label: 'Billing', href: '/portal/billing', icon: CreditCard },
-  { label: 'Access History', href: '/portal#access-history', icon: History },
-];
+  if (!session?.user?.email) {
+    redirect("/login?session=expired");
+  }
 
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const portal = await getMemberPortalData(session.user.email);
 
-  const isActive = (href: string) => {
-    if (href.startsWith('/portal#')) {
-      return pathname === '/portal';
-    }
-
-    if (href === '/portal') {
-      return pathname === '/portal';
-    }
-
-    return pathname.startsWith(href);
-  };
+  const memberName = portal.profile.fullName || portal.profile.preferredName;
+  const heroSubtitle = portal.hero.lastVisit ? `Last access ${portal.hero.lastVisit}` : portal.profile.tier;
 
   return (
-    <div className={styles.portalShell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>NSC Members</div>
-
-        <nav className={styles.navList}>
-          {navItems.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={label}
-              href={href}
-              className={clsx(styles.navLink, isActive(href) && styles.navLinkActive)}
-            >
-              <Icon size={16} />
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <button className={clsx(styles.logoutButton, styles.sidebarLogout)} type="button">
-          <LogOut size={16} />
-          Logout
-        </button>
-      </aside>
-
-      <div className={styles.content}>
-        <div className={styles.mobileHeader}>
-          <span>NSC Member Portal</span>
-          <button className={styles.logoutButton} type="button">
-            <LogOut size={16} />
-            Logout
-          </button>
-        </div>
-
-        <main className={styles.main}>{children}</main>
-
-        <nav className={styles.mobileNav}>
-          {navItems.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={label}
-              href={href}
-              className={clsx(styles.mobileNavLink, isActive(href) && styles.mobileNavLinkActive)}
-            >
-              <Icon size={18} />
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-    </div>
+    <PortalChrome
+      memberName={memberName}
+      memberSubtitle={portal.profile.membershipTagline ?? portal.profile.tier}
+      spotLabel={portal.hero.bayLabel}
+      concierge={{
+        label: portal.profile.concierge.label,
+        value: portal.profile.concierge.phone,
+        href: portal.profile.concierge.href,
+        statusLine: portal.profile.concierge.statusLine,
+      }}
+      hero={{
+        locationLabel: portal.gate.gateName,
+        title: `Spot ${portal.hero.bayLabel} — Ready for arrival`,
+        subtitle: heroSubtitle,
+      }}
+      quickAccess={{
+        gateName: portal.gate.gateName,
+        primaryCode: portal.gate.code,
+        secondaryCode: portal.gate.secondaryCode,
+        validUntil: portal.gate.validUntil,
+        lastRefreshed: portal.gate.lastRefreshed,
+        spotLabel: portal.hero.bayLabel,
+        rowLabel: portal.hero.section,
+      }}
+    >
+      {children}
+    </PortalChrome>
   );
 }

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import clsx from "clsx";
 import { AlertTriangle, DoorOpen, History, MapPin } from "lucide-react";

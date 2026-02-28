@@ -16,6 +16,12 @@ enum AccessStatus {
   MAINTENANCE
 }
 
+enum AccessEventType {
+  IN
+  OUT
+  VISIT
+}
+
 enum MembershipTier {
   FOUNDER
   PREMIUM
@@ -26,6 +32,12 @@ enum OwnerStatus {
   ACTIVE
   PENDING
   SUSPENDED
+}
+
+enum VehiclePhotoType {
+  INTAKE
+  CURRENT
+  DAMAGE
 }
 
 model Owner {
@@ -45,6 +57,7 @@ model Owner {
 
   vehicles          Vehicle[]
   conciergeRequests ConciergeRequest[]
+  accessLogs        AccessLog[]
 
   @@index([fullName])
   @@index([membershipTier])
@@ -54,7 +67,7 @@ model Owner {
 model Vehicle {
   id            String       @id @default(cuid())
   ownerId       String
-  vin           String       @unique @db.VarChar(32)
+  vin           String?      @unique @db.VarChar(32)
   year          Int
   make          String
   model         String
@@ -62,30 +75,31 @@ model Vehicle {
   color         String?
   licensePlate  String?      @db.VarChar(16)
   plateState    String?      @db.VarChar(16)
-  currentStatus AccessStatus @default(IN)
-  currentSpotId String?      @unique
+  status        AccessStatus @default(IN)
+  storageSpotId String?      @unique
   acquiredAt    DateTime?
   notes         String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
   owner             Owner                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  currentSpot       StorageSpot?         @relation(fields: [currentSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  storageSpot       StorageSpot?         @relation("StorageSpotVehicle", fields: [storageSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   photos            VehiclePhoto[]
   statusEvents      VehicleStatusEvent[]
   conciergeRequests ConciergeRequest[]
+  accessLogs        AccessLog[]
 
   @@index([ownerId])
-  @@index([ownerId, currentStatus])
+  @@index([ownerId, status])
   @@index([make, model])
-  @@index([currentStatus])
+  @@index([status])
   @@index([licensePlate])
 }
 
 model StorageSpot {
   id          String   @id @default(cuid())
   code        String   @unique
-  displayName String
+  label       String
   size        String? // e.g. "Standard", "Oversize"
   level       String? // e.g. "Main Floor", "Basement"
   climate     String? // e.g. "Standard", "Climate"
@@ -93,45 +107,72 @@ model StorageSpot {
   section     String?  @db.VarChar(32)
   rowLabel    String?  @db.VarChar(32)
   isTransient Boolean  @default(false)
+  isOccupied  Boolean  @default(false)
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  vehicle      Vehicle?
+  vehicle      Vehicle?             @relation("StorageSpotVehicle")
   statusEvents VehicleStatusEvent[]
 
   @@index([zone])
   @@index([section])
+  @@index([isOccupied])
 }
 
 model VehiclePhoto {
-  id        String   @id @default(cuid())
-  vehicleId String
-  url       String
-  caption   String?
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String           @id @default(cuid())
+  vehicleId  String
+  url        String
+  storageKey String           @unique
+  filename   String
+  mimeType   String
+  size       Int              @default(0)
+  caption    String?
+  type       VehiclePhotoType @default(CURRENT)
+  takenAt    DateTime?        @default(now())
+  isPrimary  Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId])
+  @@index([type])
 }
 
 model VehicleStatusEvent {
-  id         String       @id @default(cuid())
-  vehicleId  String
-  spotId     String?
-  status     AccessStatus
-  occurredAt DateTime     @default(now())
-  note       String?
-  recordedBy String? // staff initials or user id
+  id            String       @id @default(cuid())
+  vehicleId     String
+  storageSpotId String?
+  status        AccessStatus
+  occurredAt    DateTime     @default(now())
+  note          String?
+  recordedBy    String? // staff initials or user id
 
-  vehicle Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  spot    StorageSpot? @relation(fields: [spotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  vehicle     Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  storageSpot StorageSpot? @relation(fields: [storageSpotId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([vehicleId, occurredAt])
-  @@index([spotId])
+  @@index([storageSpotId])
   @@index([status, occurredAt])
+}
+
+model AccessLog {
+  id        String          @id @default(cuid())
+  memberId  String
+  vehicleId String?
+  eventType AccessEventType
+  timestamp DateTime        @default(now())
+  notes     String?
+  createdAt DateTime        @default(now())
+
+  member  Owner    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([memberId, timestamp])
+  @@index([vehicleId, timestamp])
+  @@index([eventType, timestamp])
 }
 
 // ─── Concierge Requests ────────────────────────────────────────────────────
@@ -144,6 +185,7 @@ enum ConciergeRequestType {
 
 enum ConciergeRequestStatus {
   PENDING
+  SCHEDULED
   IN_PROGRESS
   DONE
 }

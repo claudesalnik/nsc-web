@@ -156,17 +156,17 @@ export default function Home() {
           bay is choreographed before dawn — lights, climate, soundtrack — so your arrival feels inevitable.
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <Link href="mailto:invitations@nsc.cars?subject=Request%20Invitation" className="nsc-btn nsc-btn--primary">
+        <div className="mt-10 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <Link href="mailto:invitations@nsc.cars?subject=Request%20Invitation" className="nsc-btn nsc-btn--primary w-full text-sm sm:w-auto">
             Request Invitation
             <ArrowRight size={16} />
           </Link>
-          <Link href="/events" className="nsc-btn nsc-btn--secondary">
+          <Link href="/events" className="nsc-btn nsc-btn--secondary w-full text-sm sm:w-auto">
             <Calendar size={16} /> Members Events
           </Link>
         </div>
 
-        <div className="mt-12 grid w-full max-w-3xl gap-6 text-left text-xs sm:grid-cols-3">
+        <div className="mt-12 grid w-full max-w-3xl gap-4 text-center text-xs sm:grid-cols-3 sm:gap-6 sm:text-left">
           {heroStats.map((item) => (
             <div
               key={item}

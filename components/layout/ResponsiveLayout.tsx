@@ -57,7 +57,7 @@ export const ResponsiveLayout = ({
   if (isMobile) {
     return (
       <div className={clsx("mobile-shell", className)}>
-        {mobileHeader && <div className="mobile-safe-area-pad border-b border-[rgba(var(--border-rgb),0.45)] bg-[rgba(var(--bg-rgb),0.85)]/80 backdrop-blur-xl">{mobileHeader}</div>}
+        {mobileHeader && <div className="mobile-safe-area-pad">{mobileHeader}</div>}
         <div className={clsx("mobile-content", contentClassName)} style={mobileContentPadding}>
           {children}
         </div>

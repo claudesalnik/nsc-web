@@ -75,7 +75,7 @@ export const AccessInfo = ({
 
         <div className="rounded-3xl border border-[rgba(var(--blue-rgb),0.4)] bg-[rgba(var(--blue-rgb),0.12)] p-5 text-center">
           <p className="text-xs uppercase tracking-[0.8em] text-[rgba(var(--text-rgb),0.6)]">Primary code</p>
-          <p className="mt-3 text-4xl font-semibold tracking-[0.4em]">{code}</p>
+          <p className="nsc-code-display mt-3">{code}</p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-[rgba(var(--text-rgb),0.6)]">
             {lastRefreshed && <span>Updated {lastRefreshed}</span>}
             {humidity && (
@@ -88,7 +88,7 @@ export const AccessInfo = ({
           <button
             type="button"
             onClick={() => handleCopy(code)}
-            className="tappable-area mt-4 inline-flex min-w-[220px] items-center justify-center gap-2 rounded-2xl border border-[rgba(var(--blue-rgb),0.55)] bg-[rgba(var(--blue-rgb),0.2)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-[var(--text)]"
+            className="tappable-area mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[rgba(var(--blue-rgb),0.55)] bg-[rgba(var(--blue-rgb),0.2)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-[var(--text)] sm:min-w-[220px]"
           >
             {copied ? (
               <>

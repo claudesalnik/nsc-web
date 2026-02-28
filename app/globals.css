@@ -206,6 +206,14 @@ img {
   line-height: 1.6;
 }
 
+.nsc-code-display {
+  font-family: var(--font-sans);
+  font-size: clamp(2.2rem, 10vw, 3.2rem);
+  letter-spacing: clamp(0.3em, 2.5vw, 0.55em);
+  font-weight: 600;
+  color: var(--text);
+}
+
 .nsc-lede {
   font-size: 1.125rem;
   line-height: 1.65;
@@ -593,4 +601,39 @@ img {
 
 .nsc-logo__image {
   filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.55));
+}
+
+/***** MOBILE FIRST REFINEMENTS *****/
+@media (max-width: 720px) {
+  .nsc-section {
+    padding: var(--space-5) clamp(1.25rem, 6vw, var(--space-6));
+  }
+
+  .nsc-card {
+    border-radius: calc(var(--radius-lg) - 4px);
+    padding: calc(var(--space-4) + 0.25rem);
+  }
+
+  .nsc-heading--xl {
+    font-size: clamp(2.2rem, 8vw, 3.1rem);
+  }
+
+  .nsc-heading--lg {
+    font-size: clamp(1.45rem, 5.5vw, 2.15rem);
+  }
+
+  .nsc-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+  }
+}
+
+@media (max-width: 480px) {
+  .nsc-subheading {
+    font-size: 0.95rem;
+  }
+
+  .nsc-heading--md {
+    font-size: clamp(1.3rem, 6vw, 1.75rem);
+  }
 }
